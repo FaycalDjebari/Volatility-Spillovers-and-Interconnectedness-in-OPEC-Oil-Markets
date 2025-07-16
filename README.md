@@ -95,6 +95,12 @@ Professor of Statistics and Data Science, University of Glasgow
 
 ---
 
+## License
+
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE](./LICENSE) file for details.
+
+---
+
 ## ⚙️ How to Run the Code
 
 ### 1. Software Requirements
