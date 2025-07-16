@@ -69,7 +69,7 @@ This is the **main script** implementing the proposed methodology.
   - Euclidean, Correlation, Piccolo (AR-based)
   - Time-averaged correlations from CCC-, DCC-, and GO-GARCH
 - Visualizes networks based on each matrix
-- Estimates the GMM-based Network Log-ARCH model
+- Estimates the GMM-based Network Log-ARCH models
 - Performs out-of-sample forecasting with a rolling window
 - Computes:
   - Bootstrap confidence intervals
