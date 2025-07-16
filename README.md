@@ -104,9 +104,9 @@ Professor of Statistics and Data Science, University of Glasgow
 
 ````r
 install.packages(c("rugarch", "rmgarch", "tseries", "e1071", "igraph", "MCS",
-      "future", "parallel", "readxl", "dplyr", "ggplot2", "MASS",
-      "Rsolnp", "forecast", "MTS", "TSclust", "xts", "reshape2",
-      "wesanderson", "classInt", "lmtest", "future.apply"))
+                  "future", "parallel", "readxl", "dplyr", "ggplot2", "MASS",
+                  "Rsolnp", "forecast", "MTS", "TSclust", "xts", "reshape2",
+                  "wesanderson", "classInt", "lmtest", "future.apply"))
 
 > ⚠️ **Important:** Use `rugarch` version **1.5-3**.
 > The newer version (1.5-4) introduces internal changes that may cause errors when extracting covariance matrices (`rcov`) from **GO-GARCH** models.
