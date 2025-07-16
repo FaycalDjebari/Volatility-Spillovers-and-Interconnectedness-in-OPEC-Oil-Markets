@@ -1,3 +1,7 @@
+# Copyright 2025 Fayçal Djebari
+# Licensed under the Apache License, Version 2.0
+# See the LICENSE file in the repository root for full license information.
+
 # ====== Standard GO-GARCH Forecasting for Multiple T0 and Epsilon ======
 
 library(rmgarch)
