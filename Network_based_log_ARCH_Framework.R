@@ -604,7 +604,7 @@ corr_array_dcc <- aperm(corr_array_dcc, perm = c(3, 1, 2))
 # Compute time-averaged correlations
 avg_corr_dcc <- apply(corr_array_dcc, c(2,3), mean, na.rm = TRUE)
 
-# Calculate distances and weights (MATHEMATICALLY CONSISTENT)
+# Calculate distances and weights 
 distance_matrix_dcc <- sqrt(2 * (1 - avg_corr_dcc))
 Wmat_dcc <- 1 / (distance_matrix_dcc^2 + 1)  
 
