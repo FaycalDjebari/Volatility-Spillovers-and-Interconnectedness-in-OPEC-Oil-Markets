@@ -1,7 +1,7 @@
 # 📊 Reproducibility Guide – Network-Based Log-ARCH Framework
 
 **Preprint Title:**  
-*Volatility Spillovers and Interconnectedness in OPEC Oil Markets: A Network-Based Log-ARCH Approach*  
+_Volatility Spillovers and Interconnectedness in OPEC Oil Markets: A Network-Based Log-ARCH Approach_  
 **Authors:** Faycal Djebari, Kahina Mehidi, Khelifa Mazouz, Philipp Otto (2025)
 
 ---
@@ -23,12 +23,14 @@ All results are derived from monthly official OPEC oil prices, ensuring full **r
 - **Processed Data:** `Monthly_OPEC_OIL_PRICE_DATA.xlsx`
 
 **Scripts:**
+
 - `Calculate Log Returns.R` – Computes log returns from raw prices.
 - `Plotting Log Returns and Squared Log Returns.R` – Plots time series of log and squared returns.
 - `Histograms of Monthly Log Returns.R` – Generates histograms for each country.
 - `Descriptive Statistics Summary.R` – Computes summary statistics (mean, sd, skewness, kurtosis, JB test).
 
 **Outputs:**
+
 - `log_returns_data.csv` – Primary dataset for all modeling stages.
 - Figures and tables for descriptive analysis.
 
@@ -37,16 +39,19 @@ All results are derived from monthly official OPEC oil prices, ensuring full **r
 ### 2. `Standard MGARCH models/`
 
 **Scripts:**
+
 - `CCC GARCH.R` – Forecasting error generation for CCC-GARCH
 - `DCC GARCH.R` – Forecasting error generation for DCC-GARCH
 - `GO GARCH.R` – Forecasting error generation for GO-GARCH
 
 **Subfolders (auto-created):**
+
 - `fERR_ccc_T0/` – Forecast error matrices from CCC-GARCH
 - `fERR_dcc_T0/` – Forecast error matrices from DCC-GARCH
 - `fERR_go_T0/` – Forecast error matrices from GO-GARCH
 
 **Notes:**
+
 - Forecast errors (`fERR_*.csv`) are saved and reused to save computational time.
 - Rolling windows and multiple epsilon values are used for robustness.
 - These scripts are computationally intensive and are separated for efficiency.
@@ -58,6 +63,7 @@ All results are derived from monthly official OPEC oil prices, ensuring full **r
 This is the **main script** implementing the proposed methodology.
 
 **Key Components:**
+
 - Loads `log_returns_data.csv`
 - Constructs six types of weight matrices:
   - Euclidean, Correlation, Piccolo (AR-based)
@@ -70,30 +76,6 @@ This is the **main script** implementing the proposed methodology.
   - Diebold-Mariano statistics
   - Clark-West statistics
   - Model Confidence Set (MCS)
-
----
-
-## ⚙️ How to Run the Code
-
-### 1. Software Requirements
-
-- **R version**: 4.2 or later
-- **R packages:**
-
-```r
-install.packages(c("rugarch", "rmgarch", "tseries", "e1071", 
-                   "igraph", "MCS", "future", "parallel", 
-                   "readxl", "dplyr", "ggplot2"))
-
-> ⚠️ **Important:** Use `rugarch` version **1.5-3**.  
-> The newer version (1.5-4) introduces internal changes that may cause errors when extracting covariance matrices (`rcov`) from **GO-GARCH** models.  
-> To ensure full compatibility, please install the stable version:
->
-> ```r
-> if (!require("devtools")) install.packages("devtools")
-> devtools::install_version("rugarch", version = "1.5-3")
-> ```
-
 
 ---
 
@@ -110,3 +92,29 @@ or
 **Prof. Philipp Otto**  
 Professor of Statistics and Data Science, University of Glasgow  
 📧 Email: [Philipp.Otto@glasgow.ac.uk](mailto:Philipp.Otto@glasgow.ac.uk)
+
+---
+
+## ⚙️ How to Run the Code
+
+### 1. Software Requirements
+
+- **R version**: 4.2 or later
+- **R packages:**
+
+````r
+install.packages(c("rugarch", "rmgarch", "tseries", "e1071",
+                   "igraph", "MCS", "future", "parallel",
+                   "readxl", "dplyr", "ggplot2"))
+
+> ⚠️ **Important:** Use `rugarch` version **1.5-3**.
+> The newer version (1.5-4) introduces internal changes that may cause errors when extracting covariance matrices (`rcov`) from **GO-GARCH** models.
+> To ensure full compatibility, please install the stable version:
+>
+> ```r
+> if (!require("devtools")) install.packages("devtools")
+> devtools::install_version("rugarch", version = "1.5-3")
+> ```
+
+
+````
