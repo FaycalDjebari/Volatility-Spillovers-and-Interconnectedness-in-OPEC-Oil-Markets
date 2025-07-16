@@ -86,12 +86,14 @@ For questions, feedback, or collaboration inquiries, please contact:
 **Faycal Djebari**  
 PhD Student in Quantitative Economics, University of Bejaia  
 📧 Email: [faycal.djebari@univ-bejaia.dz](mailto:faycal.djebari@univ-bejaia.dz)
+🔗 ORCID: [https://orcid.org/0009-0002-9265-9541](https://orcid.org/0009-0002-9265-9541)
 
 or
 
 **Prof. Philipp Otto**  
 Professor of Statistics and Data Science, University of Glasgow  
 📧 Email: [Philipp.Otto@glasgow.ac.uk](mailto:Philipp.Otto@glasgow.ac.uk)
+🔗 ORCID: [https://orcid.org/0000-0002-9796-6682](https://orcid.org/0000-0002-9796-6682)
 
 ---
 
