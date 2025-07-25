@@ -5,7 +5,7 @@ _Volatility Spillovers and Interconnectedness in OPEC Oil Markets: A Network-Bas
 **Authors:** Faycal Djebari, Kahina Mehidi, Khelifa Mazouz, Philipp Otto (2025)
 
 **Cite as:** 
-Djebari, F., Mehidi, K., Mazouz, K., Otto, P. (2025). Volatility Spillovers and Interconnectedness in OPEC Oil Markets: A Network-Based Log-ARCH Approach. arXiv:2507.15046. URL: https://arxiv.org/abs/2507.15046
+Djebari, F., Mehidi, K., Mazouz, K., Otto, P. (2025). Volatility Spillovers and Interconnectedness in OPEC Oil Markets: A Network-Based Log-ARCH Approach. arXiv preprint arXiv:2507.15046. URL: https://arxiv.org/abs/2507.15046
 
 ---
 
