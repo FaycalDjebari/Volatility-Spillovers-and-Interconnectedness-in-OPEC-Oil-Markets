@@ -1,46 +1,41 @@
-# Copyright 2025 Fayçal Djebari
+# Copyright 2026 Fayçal Djebari
 # Licensed under the Apache License, Version 2.0
 # See the LICENSE file in the repository root for full license information.
 
-# ================================
-# Calculate Log Returns (OPEC)
-# ================================
+# Load necessary libraries
+library(ggplot2)
+library(tidyr)
+library(dplyr)
 
-# Load Required Libraries
-library(tidyverse)
-library(quantmod)
-library(readxl)
+# Set working directory
+#setwd("/Users/faycal/Library/CloudStorage/GoogleDrive-fayceldjebari@gmail.com/My Drive/Données/OPEC DATA/")
+setwd("/Users/faycal/Library/CloudStorage/Dropbox/Code Paper 1/Volatility-Spillovers-and-Interconnectedness-in-OPEC-Oil-Markets-main")
 
+# Read the CSV file
+df <- read.csv("log_returns_data.csv")
 
-# Set your working directory
-setwd("/Users/faycal/Library/CloudStorage/Dropbox/R code for Network log-ARCH framework/")
+# Convert Date to proper date format
+df$Date <- as.Date(df$Date)
 
-# Load Excel Data 
-data <- read_excel("Log Transformation and descriptive statistics/Monthly_OPEC_OIL_PRICE_DATA.xlsx")
+# Rename "Saudi.Arabia" to "Saudi Arabia" for clarity in plots
+colnames(df)[colnames(df) == "Saudi.Arabia"] <- "Saudi Arabia"
 
-# Convert Date column to Date format
-data$Date <- as.Date(data$Date)
+# Reshape the data for plotting (all columns except Date are countries)
+returns_long <- df %>%
+  pivot_longer(cols = -Date, names_to = "Country", values_to = "Return")
 
-# List of country columns (do not modify names like "Saudi Arabia")
-country_columns <- c("Algeria", "Iran", "Libya", "Nigeria", "Saudi Arabia", "UAE")
+# Plot the returns
+ggplot(returns_long, aes(x = Date, y = Return, color = Country)) +
+  geom_line() +
+  labs(x = "Date", y = "Log Return") +
+  theme_minimal()
 
-# Function to compute log returns
-calculate_log_returns <- function(x) {
-  Delt(x, type = "log")
-}
+# Calculate squared returns
+returns_long <- returns_long %>%
+  mutate(Squared_Return = Return^2)
 
-# Apply log returns calculation to country columns (column names preserved)
-returns_only <- data %>%
-  select(all_of(country_columns)) %>%
-  mutate(across(everything(), calculate_log_returns))
-
-# Remove the first row (NA from differencing), keep original column names
-returns_data <- cbind(Date = data$Date[-1], returns_only[-1, ])
-
-# Save the output (column names unchanged)
-write.csv(returns_data, "log_returns_data.csv", row.names = FALSE)
-
-# View first few rows
-head(returns_data)
-
-
+# Plot the squared returns
+ggplot(returns_long, aes(x = Date, y = Squared_Return, color = Country)) +
+  geom_line() +
+  labs(x = "Date", y = "Squared Log Return") +
+  theme_minimal()
