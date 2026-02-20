@@ -1,4 +1,4 @@
-# Copyright 2025 Fayçal Djebari
+# Copyright 2026 Fayçal Djebari
 # Licensed under the Apache License, Version 2.0
 # See the LICENSE file in the repository root for full license information.
 
@@ -14,7 +14,9 @@ library(TSclust)
 # Set working directory
 # =============================
 
-setwd("/Users/faycal/Library/CloudStorage/Dropbox/R code for Network log-ARCH framework/")
+#setwd("/Users/faycal/Library/CloudStorage/Dropbox/R code for Network log-ARCH framework/")
+setwd("/Users/faycal/Library/CloudStorage/Dropbox/Code Paper 1/Volatility-Spillovers-and-Interconnectedness-in-OPEC-Oil-Markets-main")
+setwd("/Users/faycaldjebari/Library/CloudStorage/Dropbox/Code Paper 1/Volatility-Spillovers-and-Interconnectedness-in-OPEC-Oil-Markets-main")
 
 log_returns <- read.csv("log_returns_data.csv")
 
@@ -423,35 +425,9 @@ lines(as.Date(log_returns$Date), log_returns$UAE, col = "purple")
 cor(log_returns[,2:7])
 
 
-#  ========= Construction of the Weight matrices ================
+# ----- Prepare data matrix Y
 
 Y <- t(as.matrix(log_returns[,2:7]))
-
-
-# Alternative A: standard Euclidean distance
-Wmat1 <- as.matrix(diss(Y, "EUCL"))
-Wmat1 <- 1/Wmat1
-diag(Wmat1) <- 0
-Wmat1 <- Wmat1 / max(eigen(Wmat1, only.values = TRUE)$values)
-print(Wmat1)
-
-
-
-# Alternative B: correlation-based distance
-Wmat2 <- as.matrix(diss(Y, "COR"))
-Wmat2 <- 1/Wmat2
-diag(Wmat2) <- 0
-Wmat2 <- Wmat2 / max(eigen(Wmat2, only.values = TRUE)$values)
-print(Wmat2)
-
-# ------- Alternative C: log-ARCH approach -------- 
-Wmat3 <- as.matrix(diss(Y, "AR.PIC"))
-Wmat3 <- 1/Wmat3
-diag(Wmat3) <- 0
-Wmat3 <- Wmat3 / max(eigen(Wmat3, only.values = TRUE)$values)
-print(Wmat3)
-
-
 n <- dim(Y)[1]
 t <- dim(Y)[2]
 
@@ -465,17 +441,12 @@ library(xts)
 library(reshape2)
 library(dplyr)
 
-
-
 # ====== Data Preparation ========
 
 start_date <- as.Date("1983-02-01")
 date_index <- seq(from = start_date, by = "months", length.out = ncol(Y))
 Y_xts <- xts(t(Y), order.by = date_index)
 print(Y_xts)
-
-
-
 
 
 # ====== Define Univariate GARCH(1,1) Model ========
@@ -559,6 +530,7 @@ print(combined_df)
 
 
 
+#  ========= Construction of the Weight matrices using the full sample ================
 
 # =========== CCC-GARCH Model using DCC framework ========
 
@@ -620,7 +592,6 @@ Wmat_dcc <- Wmat_dcc / max(eigen(Wmat_dcc, only.values=TRUE)$values)
 print(Wmat_dcc)
 
 
-
 # ====== GO-GARCH Model ========
 spec_go <- gogarchspec(
   multispec(replicate(nrow(Y), spec_univ)),
@@ -628,7 +599,8 @@ spec_go <- gogarchspec(
 )
 go_fit <- gogarchfit(spec_go, data = t(Y))
 print(go_fit)
-
+coef(go_fit)
+summary(go_fit)
 
 
 likelihood(go_fit)
@@ -643,15 +615,12 @@ cat("AIC:", AIC, "\n")
 cat("BIC:", BIC, "\n")
 
 
-
-
 # Install rugarch version 1.5.3 if not already installed
 # This specific version is required for reproducibility of the weight matrix
 # The new version currently available on CRAN (1.5.4) does not not work properly with the GO-GARCH model
 # Uncomment the following lines to install the specific version
 #install.packages("remotes")
 #remotes::install_version("rugarch", version = "1.5.3", repos = "http://cran.us.r-project.org", force = TRUE)
-
 
 
 # Calculate time-averaged correlation matrix from GO-GARCH
@@ -677,6 +646,218 @@ W_go <- W_go / max(eigen(W_go, only.values = TRUE)$values)
 print(W_go)
 
 
+# Alternative A: standard Euclidean distance
+Wmat1 <- as.matrix(diss(Y, "EUCL"))
+Wmat1 <- 1/Wmat1
+diag(Wmat1) <- 0
+Wmat1 <- Wmat1 / max(eigen(Wmat1, only.values = TRUE)$values)
+print(Wmat1)
+
+
+
+# Alternative B: correlation-based distance
+Wmat2 <- as.matrix(diss(Y, "COR"))
+Wmat2 <- 1/Wmat2
+diag(Wmat2) <- 0
+Wmat2 <- Wmat2 / max(eigen(Wmat2, only.values = TRUE)$values)
+print(Wmat2)
+
+# ------- Alternative C: log-ARCH approach -------- 
+Wmat3 <- as.matrix(diss(Y, "AR.PIC"))
+Wmat3 <- 1/Wmat3
+diag(Wmat3) <- 0
+Wmat3 <- Wmat3 / max(eigen(Wmat3, only.values = TRUE)$values)
+print(Wmat3)
+
+
+
+
+
+
+
+
+# ==============================================================================
+# Estimation of the Weight Matrices for a given T0
+# ==============================================================================
+library(rmgarch)
+library(rugarch)
+library(xts)
+library(TSclust)
+library(Matrix)
+
+
+# ==============================================================================
+# 1. FUNCTION: GENERATE WEIGHTS FOR A SPECIFIC T0
+# ==============================================================================
+
+generate_weights_for_T0 <- function(Y, T0) {
+  
+  cat(paste0("\n>>> Generating Weight Matrices for In-Sample Window: T0 = ", T0, " <<<\n"))
+  
+  # --- A. Data Preparation ---
+  # Subset the data to the first T0 observations
+  Y_train <- Y[, 1:T0]
+  
+  # Create XTS object for GARCH packages (Expects T observations x N variables)
+  # Assuming monthly data starts 1983-02-01 (adjust if needed)
+  date_index_sub <- seq(from = as.Date("1983-02-01"), by = "months", length.out = T0)
+  Y_xts_sub <- xts(t(Y_train), order.by = date_index_sub)
+  
+  # --- B. Define Univariate GARCH Specs ---
+  # Standard GARCH(1,1) with Student-t distribution
+  spec_univ <- ugarchspec(
+    variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
+    mean.model = list(armaOrder = c(0, 0)),
+    distribution.model = "std"
+  )
+  # Create multispec for all N variables
+  mspec <- multispec(replicate(ncol(Y_xts_sub), spec_univ))
+  
+  
+  # ============================================================
+  # 1. CCC-GARCH Weights
+  # ============================================================
+  cat("   ... estimating CCC-GARCH\n")
+  spec_ccc <- dccspec(uspec = mspec, dccOrder = c(0, 0), distribution = "mvt")
+  # Fit CCC
+  ccc_fit <- tryCatch(dccfit(spec_ccc, data = Y_xts_sub), error=function(e) NULL)
+  
+  if(!is.null(ccc_fit)) {
+    # Extract Constant Correlation
+    ccc_corr <- rcor(ccc_fit)[,,1] 
+    # Distance & Weights
+    dist_ccc <- sqrt(2 * (1 - ccc_corr))
+    W_ccc <- 1 / (dist_ccc^2 + 1)
+    diag(W_ccc) <- 0
+    # Normalize (Spectral Radius)
+    W_ccc <- W_ccc / max(eigen(W_ccc, symmetric=TRUE, only.values=TRUE)$values)
+  } else { W_ccc <- NULL }
+  
+  
+  # ============================================================
+  # 2. DCC-GARCH Weights
+  # ============================================================
+  cat("   ... estimating DCC-GARCH\n")
+  spec_dcc <- dccspec(uspec = mspec, dccOrder = c(1, 1), distribution = "mvt")
+  dcc_fit <- tryCatch(dccfit(spec_dcc, data = Y_xts_sub), error=function(e) NULL)
+  
+  if(!is.null(dcc_fit)) {
+    # Extract Dynamic Correlations and Average them
+    corr_array <- rcor(dcc_fit) # Array [N, N, T]
+    avg_corr_dcc <- apply(corr_array, c(1, 2), mean)
+    # Distance & Weights
+    dist_dcc <- sqrt(2 * (1 - avg_corr_dcc))
+    W_dcc <- 1 / (dist_dcc^2 + 1)
+    diag(W_dcc) <- 0
+    # Normalize
+    W_dcc <- W_dcc / max(eigen(W_dcc, symmetric=TRUE, only.values=TRUE)$values)
+  } else { W_dcc <- NULL }
+  
+  
+  # ============================================================
+  # 3. GO-GARCH Weights
+  # ============================================================
+  cat("   ... estimating GO-GARCH\n")
+  spec_go <- gogarchspec(mspec, distribution.model = "mvnorm")
+  go_fit <- tryCatch(gogarchfit(spec_go, data = Y_xts_sub), error=function(e) NULL)
+  
+  if(!is.null(go_fit)) {
+    # Calculate Time-Averaged Correlation Matrix
+    rcov_go <- rcov(go_fit) # Array [N, N, T]
+    T_sub <- dim(rcov_go)[3]
+    
+    # Efficient averaging of correlation matrices
+    # (Converting Covariance to Correlation for each t and averaging)
+    R_go_avg <- matrix(0, nrow=nrow(Y_train), ncol=nrow(Y_train))
+    for(t in 1:T_sub) {
+      V_t <- rcov_go[,,t]
+      D_inv <- diag(1 / sqrt(diag(V_t)))
+      R_go_avg <- R_go_avg + (D_inv %*% V_t %*% D_inv)
+    }
+    R_go_avg <- R_go_avg / T_sub
+    
+    # Distance & Weights
+    dist_go <- sqrt(2 * (1 - R_go_avg))
+    W_go <- 1 / (dist_go^2 + 1)
+    diag(W_go) <- 0
+    # Normalize
+    W_go <- W_go / max(eigen(W_go, symmetric=TRUE, only.values=TRUE)$values)
+  } else { W_go <- NULL }
+  
+  
+  # ============================================================
+  # 4. Euclidean Distance (Wmat1)
+  # ============================================================
+  cat("   ... calculating Euclidean Weights\n")
+  # TSclust::diss expects variables in rows if not specified otherwise, 
+  # checking TSclust docs: usually expects [Time x Series]. 
+  # However, your previous code used diss(Y, "EUCL") where Y is [N x T]. 
+  # TSclust treats rows as objects to cluster. So passing Y_train [N x T0] is correct.
+  W_euc <- as.matrix(diss(Y_train, "EUCL"))
+  W_euc <- 1 / (W_euc + 1e-10) # Avoid div by zero if distance is 0
+  diag(W_euc) <- 0
+  W_euc <- W_euc / max(eigen(W_euc, symmetric=TRUE, only.values=TRUE)$values)
+  
+  
+  # ============================================================
+  # 5. Correlation Distance (Wmat2)
+  # ============================================================
+  cat("   ... calculating Correlation Weights\n")
+  W_cor <- as.matrix(diss(Y_train, "COR"))
+  W_cor <- 1 / (W_cor + 1e-10)
+  diag(W_cor) <- 0
+  W_cor <- W_cor / max(eigen(W_cor, symmetric=TRUE, only.values=TRUE)$values)
+  
+  
+  # ============================================================
+  # 6. Piccolo Distance (Wmat3)
+  # ============================================================
+  cat("   ... calculating Piccolo Weights\n")
+  W_pic <- as.matrix(diss(Y_train, "AR.PIC"))
+  W_pic <- 1 / (W_pic + 1e-10)
+  diag(W_pic) <- 0
+  W_pic <- W_pic / max(eigen(W_pic, symmetric=TRUE, only.values=TRUE)$values)
+  
+  
+  # --- Return Named List ---
+  return(list(
+    CCC = W_ccc,
+    DCC = W_dcc,
+    GO  = W_go,
+    Euclidean = W_euc,
+    Correlation = W_cor,
+    Piccolo = W_pic
+  ))
+}
+
+
+# ==============================================================================
+# 2. MAIN LOOP: CREATE AND NAME VARIABLES FOR EACH T0
+# ==============================================================================
+
+T0_values <- c(200, 250, 300, 350, 400, 450)
+all_weights_storage <- list() # Store everything in a master list first
+
+for (T0 in T0_values) {
+  
+  # 1. Generate Weights
+  weights <- generate_weights_for_T0(Y, T0)
+  
+  # 2. Store in Master List (for safety)
+  all_weights_storage[[as.character(T0)]] <- weights
+  
+  # 3. Create Individual Variables in Global Environment
+  # Naming convention: Wmat_[Type]_[T0] or Wmat[Number]_[T0]
+  
+  assign(paste0("Wmat_CCC_", T0), weights$CCC)
+  assign(paste0("Wmat_DCC_", T0), weights$DCC)
+  assign(paste0("Wmat_GO_", T0),  weights$GO)
+  
+  assign(paste0("Wmat1_", T0),    weights$Euclidean)   # Wmat1 = Euclidean
+  assign(paste0("Wmat2_", T0),    weights$Correlation) # Wmat2 = Correlation
+  assign(paste0("Wmat3_", T0),    weights$Piccolo)     # Wmat3 = Piccolo
+  
+}
 
 
 
@@ -776,9 +957,27 @@ plot_all_networks <- function(Wlist) {
 
 Wlist <- list(Wmat1, Wmat2, Wmat3, Wmat_ccc, Wmat_dcc, W_go)
 
+Wlist_250 <- list(Wmat1_250, Wmat2_250, Wmat3_250, Wmat_CCC_250, Wmat_DCC_250, Wmat_GO_250)
+
+Wlist_300<- list(Wmat1_300, Wmat2_300, Wmat3_300, Wmat_CCC_300, Wmat_DCC_300, Wmat_GO_300)
+
+Wlist_350<- list(Wmat1_350, Wmat2_350, Wmat3_350, Wmat_CCC_350, Wmat_DCC_350, Wmat_GO_350)
+
+Wlist_200<- list(Wmat1_200, Wmat2_200, Wmat3_200, Wmat_CCC_200, Wmat_DCC_200, Wmat_GO_200)
+
+Wlist_400<- list(Wmat1_400, Wmat2_400, Wmat3_400, Wmat_CCC_400, Wmat_DCC_400, Wmat_GO_400)
+
+Wlist_450<- list(Wmat1_450, Wmat2_450, Wmat3_450, Wmat_CCC_450, Wmat_DCC_450, Wmat_GO_450)
+
 # Plot all networks 
 plot_all_networks(Wlist)
 
+plot_all_networks(Wlist_250)
+plot_all_networks(Wlist_300)
+plot_all_networks(Wlist_350)
+plot_all_networks(Wlist_200)
+plot_all_networks(Wlist_400)
+plot_all_networks(Wlist_450)
 
 
 
@@ -786,30 +985,38 @@ plot_all_networks(Wlist)
 
 
 
+# ====== GMM-SDPD-2SLS-ARCH Model Estimation (In-Sample: 450 Obs) ======
 
-# ====== GMM-SDPD-2SLS-ARCH Model Estimation ======
+# 1. Define the In-Sample Size
+T_in <- 450 
 
+# 2. Subset Y correctly (Select all rows, but only the first 450 columns)
+Y_in <- Y[, 1:T_in]
 
 # Named list of Network weight matrices
 weight_matrices <- list(
-  Net_CCC     = Wmat_ccc,
-  Net_DCC     = Wmat_dcc,
-  Net_GO      = W_go,
-  Euclidean   = Wmat1,
-  Correlation = Wmat2,
-  Piccolo     = Wmat3
+  Net_CCC     = Wmat_CCC_450,
+  Net_DCC     = Wmat_DCC_450,
+  Net_GO      = Wmat_GO_450,
+  Euclidean   = Wmat1_450,
+  Correlation = Wmat2_450,
+  Piccolo     = Wmat3_450
 )
 
 # Clear the environment of any previous model results
 rm(list = names(weight_matrices)[names(weight_matrices) %in% ls()])
 
-# -----Estimation and Assignment ------
+# ----- Estimation and Assignment ------
 
 for (name in names(weight_matrices)) {
   cat("Estimating model for:", name, "\n")
   
+  # Calculate the stabilizing constant using ONLY the in-sample data
+  # (This prevents future data leakage)
+  min_val <- min(Y_in[Y_in != 0]^2)
+  
   model_output <- GMM_SDPD_2SLS_ARCH_ind_timelags(
-    Y = log(Y^2 + min(Y[Y != 0]^2)),  # stabilizing log transformation
+    Y = log(Y_in^2 + min_val),  # Use the subsetted Y_in
     X = NULL,
     W = weight_matrices[[name]],
     info = list(ksy = 10, ksx = 10, stl = 0, tl = 1, ted = 0)
@@ -819,36 +1026,39 @@ for (name in names(weight_matrices)) {
   assign(name, model_output)
 }
 
-# Display Structured Results 
+# ----- Display Structured Results -----
 
 for (name in names(weight_matrices)) {
-  res <- get(name)  # retrieve the model result (e.g., Net_GO)
-  
-  cat("\n=========== Results for", name, "===========\n")
-  
-  
-  if (!is.null(res$theta)) {
-    cat("Theta:\n"); print(res$theta)
+  if (exists(name)) {
+    res <- get(name)
+    
+    cat("\n=========== Results for", name, "===========\n")
+    
+    if (!is.null(res$theta)) {
+      cat("Theta:\n"); print(res$theta)
+    } else {
+      cat("Theta: not found\n")
+    }
+    
+    if (!is.null(res$std)) {
+      cat("Standard Errors:\n"); print(res$std)
+    } else {
+      cat("Standard Errors: not found\n")
+    }
+    
+    if (!is.null(res$tstat)) {
+      cat("T-Statistics:\n"); print(round(res$tstat, 3))
+    } else {
+      cat("T-Statistics: not found\n")
+    }
+    
+    if (!is.null(res$sigma2)) {
+      cat("Sigma2:\n"); print(res$sigma2)
+    } else {
+      cat("Sigma2: not found\n")
+    }
   } else {
-    cat("Theta: not found\n")
-  }
-  
-  if (!is.null(res$std)) {
-    cat("Standard Errors:\n"); print(res$std)
-  } else {
-    cat("Standard Errors: not found\n")
-  }
-  
-  if (!is.null(res$tstat)) {
-    cat("T-Statistics:\n"); print(round(res$tstat, 3))
-  } else {
-    cat("T-Statistics: not found\n")
-  }
-  
-  if (!is.null(res$sigma2)) {
-    cat("Sigma2:\n"); print(res$sigma2)
-  } else {
-    cat("Sigma2: not found\n")
+    cat("\nWarning: Object", name, "was not created.\n")
   }
 }
 
@@ -856,20 +1066,15 @@ for (name in names(weight_matrices)) {
 
 
 
-
-
-
-
-
-
-
-# ====== forecasting part of Network-based Log-ARCH Framework ======
-
+# ==============================================================================
+# FORECASTING PART OF NETWORK-BASED LOG-ARCH FRAMEWORK
+# ==============================================================================
 
 # ====================================
 # Define Relative Forecast Folder Path
 # ====================================
 forecast_subfolder <- "Standard MGARCH models"
+
 # =============================
 # Define models and available T0/epsilon combinations
 # =============================
@@ -877,10 +1082,10 @@ models <- c("ccc", "dcc", "go")
 eps_filenames <- list(min = "min", one_pct = "one_pct.1%", small = "small")
 
 # T0 where all three eps are available
-T0_all_eps <- 300
+T0_all_eps <- 450
 
 # Other T0s where only "min" is available
-T0_min_only <- c(200, 250, 350)
+T0_min_only <- c(200, 250, 350, 400)
 
 # =============================
 # Helper function to read CSV safely
@@ -929,12 +1134,10 @@ for (model in models) {
   }
 }
 
-
-
 # ===== 0. Setup and Dependencies =====
 # Load required packages
 dependencies <- c("forecast", "lmtest", "parallel", "future.apply", "MCS")
-for (pkg in dependencies) { # Using a for loop to avoid parsing issues with lapply(..., character.only = TRUE)
+for (pkg in dependencies) { 
   library(pkg, character.only = TRUE)
 }
 
@@ -944,7 +1147,7 @@ set.seed(123)
 
 # ===== 1. Helper Functions =====
 
-#' One‐step ahead forecast via GMM‐based spatial model
+#' One-step ahead forecast via GMM-based spatial model
 #' @param est_obj list returned by gmm estimation (theta vector)
 #' @param W spatial weights matrix (n x n)
 #' @param prev_vol numeric vector of log-squared volumes at time t
@@ -967,31 +1170,25 @@ calculate_metrics <- function(err_mat) {
   list(RMSFE = RMSFE, MAFE = MAFE)
 }
 
-#' Clark–West test for nested model comparison
+#' Clark-West test for nested model comparison
 #' @param e_small numeric vector of squared errors for small (nested) model
 #' @param e_large numeric vector of squared errors for large model
 #' @return list with statistic and p.value
 cw_test <- function(e_small, e_large) {
-  # Ensure inputs are numeric vectors and handle NAs consistently
   e_small <- as.vector(e_small)
   e_large <- as.vector(e_large)
   
-  # Remove NA pairs
   common_nona <- !is.na(e_small) & !is.na(e_large)
   e_small <- e_small[common_nona]
   e_large <- e_large[common_nona]
   
-  if (length(e_small) < 2) { # Need at least 2 observations for sd
-    return(list(statistic = NA, p.value = NA))
-  }
+  if (length(e_small) < 2) return(list(statistic = NA, p.value = NA))
   
   d <- e_small^2 - e_large^2 + (e_large - e_small)^2
   mean_d <- mean(d, na.rm = TRUE)
   se_d <- sd(d, na.rm = TRUE) / sqrt(length(d))
   
-  if (is.na(se_d) || se_d == 0) { # Handle cases where sd is NA or 0
-    return(list(statistic = NA, p.value = NA))
-  }
+  if (is.na(se_d) || se_d == 0) return(list(statistic = NA, p.value = NA))
   
   cw_stat <- mean_d / se_d
   pval <- 2 * pnorm(-abs(cw_stat))
@@ -1020,30 +1217,86 @@ bootstrap_CI <- function(err_mat, R = 2000, seed = 123) {
   )
 }
 
+# ------------------------------------------------------------------------------
+# NEW HELPER: Construct model list with correct weights for a specific T0
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# UPDATED: Construct model list with correct weights and Estimation Time/RAM tracking
+# ------------------------------------------------------------------------------
+get_models_for_T0 <- function(T0, Y) {
+  
+  # 1. Retrieve specific Weight Matrices for this T0 from Global Env
+  w_euc <- get(paste0("Wmat1_", T0))      # Euclidean
+  w_cor <- get(paste0("Wmat2_", T0))      # Correlation
+  w_pic <- get(paste0("Wmat3_", T0))      # Piccolo
+  w_ccc <- get(paste0("Wmat_CCC_", T0))   # Net_CCC
+  w_dcc <- get(paste0("Wmat_DCC_", T0))   # Net_DCC
+  w_go  <- get(paste0("Wmat_GO_", T0))    # Net_GO
+  
+  # 2. Define Training Data for this T0
+  Y_train <- Y[, 1:T0]
+  
+  # 3. Estimate GMM Parameters (Theta) for these weights WITH tracking
+  fit_gmm <- function(W_mat, name) {
+    gc(reset = TRUE)
+    start_time <- Sys.time()
+    
+    obj <- tryCatch({
+      GMM_SDPD_2SLS_ARCH_ind_timelags(
+        Y = Y_train, 
+        X = NULL, 
+        W = W_mat, 
+        info = list(ksy = 10, ksx = 10, stl = 0, tl = 1, ted = 0)
+      )
+    }, error = function(e) {
+      message("Estimation failed for T0=", T0, " Model=", name)
+      return(NULL) 
+    })
+    
+    end_time <- Sys.time()
+    mem <- gc()
+    ram_mb <- sum(mem[, 6])
+    dur <- as.numeric(difftime(end_time, start_time, units = "secs"))
+    
+    cat(sprintf("   -> %s Estimation: %.2f sec | RAM: %.2f MB\n", name, dur, ram_mb))
+    return(obj)
+  }
+  
+  cat("\nStarting GMM Estimations...\n")
+  # 4. Return list structure required by run_forecasts
+  list(
+    Euclidean   = list(obj = fit_gmm(w_euc, "Euclidean"), W = w_euc),
+    Correlation = list(obj = fit_gmm(w_cor, "Correlation"), W = w_cor),
+    Piccolo     = list(obj = fit_gmm(w_pic, "Piccolo"), W = w_pic),
+    Net_CCC     = list(obj = fit_gmm(w_ccc, "Net_CCC"), W = w_ccc),
+    Net_DCC     = list(obj = fit_gmm(w_dcc, "Net_DCC"), W = w_dcc),
+    Net_GO      = list(obj = fit_gmm(w_go, "Net_GO"),  W = w_go)
+  )
+}
 
-# ===== 2. Rolling‐Window Forecast Routine =====
 
-models_list <- list(
-  Euclidean = list(obj = Euclidean, W = Wmat1),
-  Correlation = list(obj = Correlation, W = Wmat2),
-  Piccolo = list(obj = Piccolo, W = Wmat3),
-  Net_CCC = list(obj = Net_CCC, W = Wmat_ccc),
-  Net_DCC = list(obj = Net_DCC, W = Wmat_dcc),
-  Net_GO = list(obj = Net_GO, W = W_go)
-)
+# ===== 2. Rolling-Window Forecast Routine =====
 
-#' Run rolling‐window forecasts and compute errors
+#' Run rolling-window forecasts and compute errors
 #' @param Y data matrix (n_series x T_total)
 #' @param models named list of model objects and weights
 #' @param T0 initial window size
 #' @param eps small constant for log-squared transform
 #' @return list with fERR matrices, RMSFE and MAFE vectors
+#' Run rolling-window forecasts and compute errors
+# ===== 2. Rolling-Window Forecast Routine (FIXED & FAST) =====
+
 run_forecasts <- function(Y, models, T0, eps, standard_errors = NULL) {
   T_total <- ncol(Y)
   n_forecasts <- T_total - T0
   n_series <- nrow(Y)
   
   fERR <- lapply(models, function(x) matrix(NA, nrow = n_forecasts, ncol = n_series))
+  time_mat <- matrix(0, nrow = n_forecasts, ncol = length(models))
+  colnames(time_mat) <- names(models)
+  
+  ram_vec <- numeric(length(models))
+  names(ram_vec) <- names(models)
   
   pb <- txtProgressBar(min = 1, max = n_forecasts, style = 3)
   for (i in seq_len(n_forecasts)) {
@@ -1051,16 +1304,43 @@ run_forecasts <- function(Y, models, T0, eps, standard_errors = NULL) {
     t_train <- T0 + i - 1
     prev_vol <- log(Y[, t_train]^2 + eps)
     actual <- log(Y[, t_train + 1]^2 + eps)
-    for (name in names(models)) {
+    
+    for (j in seq_along(names(models))) {
+      name <- names(models)[j]
       est <- models[[name]]$obj
       Wmat <- models[[name]]$W
-      fcast <- forecast_gmm(est, Wmat, prev_vol)
-      fERR[[name]][i, ] <- actual - fcast
+      
+      if(!is.null(est)) { 
+        if (i == 1) {
+          # Track RAM only on the first step to keep the loop lightning fast
+          gc(reset = TRUE)
+          t_start <- Sys.time()
+          fcast <- forecast_gmm(est, Wmat, prev_vol)
+          t_end <- Sys.time()
+          
+          mem_used <- gc()
+          ram_vec[name] <- sum(mem_used[, 6]) 
+          
+          fERR[[name]][i, ] <- actual - fcast
+          time_mat[i, j] <- as.numeric(difftime(t_end, t_start, units = "secs"))
+          
+        } else {
+          # Time tracking only for the remaining steps
+          t_start <- Sys.time()
+          fcast <- forecast_gmm(est, Wmat, prev_vol)
+          fERR[[name]][i, ] <- actual - fcast
+          t_end <- Sys.time()
+          
+          time_mat[i, j] <- as.numeric(difftime(t_end, t_start, units = "secs"))
+        }
+      }
     }
   }
   close(pb)
   
-  # Add precomputed standard model fERRs if provided
+  avg_time <- colMeans(time_mat, na.rm = TRUE)
+  avg_ram <- ram_vec
+  
   if (!is.null(standard_errors)) {
     for (model in names(standard_errors)) {
       fERR[[model]] <- standard_errors[[model]]
@@ -1071,33 +1351,30 @@ run_forecasts <- function(Y, models, T0, eps, standard_errors = NULL) {
   avg_RMSFE <- sapply(metrics, function(m) mean(m$RMSFE, na.rm = TRUE))
   avg_MAFE <- sapply(metrics, function(m) mean(m$MAFE, na.rm = TRUE))
   
-  list(fERR = fERR, RMSFE = avg_RMSFE, MAFE = avg_MAFE)
+  list(fERR = fERR, RMSFE = avg_RMSFE, MAFE = avg_MAFE, avg_time = avg_time, avg_ram = avg_ram)
 }
 
 
-# ===== 3. Experiments Over T0 and ε =====
-
+# ===== 3. Experiments Over T0 and epsilon =====
 
 eps_vals <- c(
   min = min(Y[Y != 0]^2),
   one_pct = as.numeric(quantile(Y[Y != 0]^2, 0.01)), 
   small = 1e-6
 )
-T0_vec <- c(200, 250, 300, 350)
-results <- list()
-
-
-
-
 
 results <- list()
 rmsfe_values <- list()
 mafe_baseline <- list()
 
-T0 <- 300 
-
+# --- Main Block for T0 = 450 (All epsilons) ---
+T0 <- 450 
 results[[as.character(T0)]]      <- list()
 rmsfe_values[[as.character(T0)]] <- list()
+
+# >>> Estimate Models for T0 = 300 <<<
+cat("Estimating GMM parameters for T0 =", T0, "...\n")
+current_models <- get_models_for_T0(T0, Y)
 
 for (eps_name in names(eps_vals)) {
   cat("Running forecasts with T0 =", T0, "and epsilon =", eps_name, "\n")
@@ -1111,30 +1388,46 @@ for (eps_name in names(eps_vals)) {
     }
   }
   
-  # Run forecasts: with dynamic network + preloaded GARCH
-  res <- run_forecasts(Y, models_list, T0, eps_vals[eps_name], standard_errors = garch_models)
+  # Run forecasts (Removed eps_name argument here!)
+  res <- run_forecasts(Y, current_models, T0, eps_vals[[eps_name]], standard_errors = garch_models)
+  
+  # --- NEW: Print Computation Metrics ---
+  cat("\n  Network Models - Average Forecast Time (Seconds per step):\n")
+  print(round(res$avg_time, 6))
+  
+  cat("\n  Network Models - Average RAM Usage (MB):\n")
+  print(round(res$avg_ram, 2))
+  # ------------------------------------
   
   results[[as.character(T0)]][[eps_name]] <- res
   rmsfe_values[[as.character(T0)]][[eps_name]] <- round(res$RMSFE, 4)
   
-  cat("  RMSFE:\n")
+  cat("\n  RMSFE:\n")
   print(rmsfe_values[[as.character(T0)]][[eps_name]])
   
-  if (eps_name == "min") {
-    mafe_baseline[["300"]] <- round(res$MAFE, 4)
-    cat("\nBaseline MAFE (T0 = 300, eps = 'min'):\n")
-    print(mafe_baseline[["300"]])
+  if (eps_name == "one_pct") {
+    mafe_baseline[["450"]] <- round(res$MAFE, 4)
+    cat("\nBaseline MAFE (T0 = 450, eps = 'one_pct'):\n")
+    print(mafe_baseline[["450"]])
   }
 }
 
 
 # ===== 4. Additional T0 Values with eps = min =====
 
-additional_T0 <- c(200, 250, 350)
+additional_T0 <- c(200, 250, 300, 350, 400, 450)
 eps_name <- "min"
 
 for (T0 in additional_T0) {
-  cat("Running forecasts with T0 =", T0, "and epsilon =", eps_name, "\n")
+  cat("\n------------------------------------------------\n")
+  cat("Processing T0 =", T0, "(eps = min)\n")
+  cat("------------------------------------------------\n")
+  
+  # >>> Estimate Models for current T0 <<<
+  cat("Estimating GMM parameters for T0 =", T0, "...\n")
+  current_models <- get_models_for_T0(T0, Y)
+  
+  # Load saved GARCH models
   garch_models <- list()
   for (model in c("CCC", "DCC", "GO")) {
     ferr_mat <- standard_fERR_list[[model]][[as.character(T0)]][[eps_name]]
@@ -1143,14 +1436,21 @@ for (T0 in additional_T0) {
     }
   }
   
-  res <- run_forecasts(Y, models_list, T0, eps_vals[[eps_name]], standard_errors = garch_models)
-  results[[as.character(T0)]] <- list()
-  results[[as.character(T0)]][[eps_name]] <- res
+  # Run forecasts (This will now be extremely fast)
+  res <- run_forecasts(Y, current_models, T0, eps_vals[[eps_name]], standard_errors = garch_models)
   
-  rmsfe_values[[as.character(T0)]] <- list()
+  # Print the Average Forecasting Time
+  cat("\n  Average Forecasting Time (Seconds per step):\n")
+  print(round(res$avg_time, 6))
+  
+  # Initialize list structure if not exists
+  if(is.null(results[[as.character(T0)]])) results[[as.character(T0)]] <- list()
+  if(is.null(rmsfe_values[[as.character(T0)]])) rmsfe_values[[as.character(T0)]] <- list()
+  
+  results[[as.character(T0)]][[eps_name]] <- res
   rmsfe_values[[as.character(T0)]][[eps_name]] <- round(res$RMSFE, 4)
   
-  cat("RMSFE for T0 =", T0, ", eps = min:\n")
+  cat("\nRMSFE for T0 =", T0, ", eps = min:\n")
   cat(paste0("  ", paste(names(res$RMSFE), collapse = " & "), " \\\\\n"))
   cat(paste0("  ", paste(sprintf("%.4f", res$RMSFE), collapse = " & "), " \\\\\n\n"))
 }
@@ -1158,9 +1458,9 @@ for (T0 in additional_T0) {
 
 
 # ===== Combine Standard and GMM-Based fERRs into a Unified List =====
-all_ferr <- results[["300"]][["min"]]$fERR
+# Using the main case (T0=450, eps=one_pct) for final tests
+all_ferr <- results[["450"]][["one_pct"]]$fERR
 model_names <- names(all_ferr)
-
 
 
 # ===== 2. Bootstrap Confidence Intervals =====
@@ -1168,10 +1468,10 @@ ci_list <- lapply(all_ferr, function(mat) {
   bootstrap_CI(mat, R = 2000, seed = 123)
 })
 
-cat("\nBootstrap CIs (RMSFE, MAFE) for T0 = 300 (R=2000) including all models:\n")
+cat("\nBootstrap CIs (RMSFE, MAFE) for T0 = 450 (R=2000) including all models:\n")
 print(ci_list)
 
-# ===== 3. Diebold–Mariano (DM) Test =====
+# ===== 3. Diebold-Mariano (DM) Test =====
 
 dm_p <- matrix(NA, length(model_names), length(model_names),
                dimnames = list(model_names, model_names))
@@ -1184,7 +1484,7 @@ for (i in seq_along(all_ferr)) {
       
       err_diff <- e1 - e2
       if (sd(err_diff, na.rm = TRUE) < 1e-10) {
-        warning(sprintf("DM test skipped for models (%s, %s): near-zero variance in error differences.",
+        warning(sprintf("DM test skipped for models (%s, %s): near-zero variance.",
                         model_names[i], model_names[j]))
         next
       }
@@ -1202,39 +1502,306 @@ for (i in seq_along(all_ferr)) {
   }
 }
 
-cat("\nRobust Diebold–Mariano p-values (T0 = 300, ε = 'min'):\n")
+cat("\nRobust Diebold-Mariano p-values (T0 = 450, eps = 'min'):\n")
 print(round(dm_p, 4))
 
 
-# ===== 4. Clark–West (CW) Test =====
-cw_p <- matrix(NA, length(model_names), length(model_names),
-               dimnames = list(model_names, model_names))
+
+# ==============================================================================
+# HARVEY (2024) FUNCTIONS 
+# ==============================================================================
+
+# 1. Long-run Variance (Newey-West)
+lrvarnw_custom <- function(data, lags = NULL) {
+  data <- as.matrix(data)
+  T_len <- nrow(data)
+  if (is.null(lags)) lags <- min(floor(1.2 * T_len^(1/3)), T_len)
+  
+  w <- (lags + 1 - (0:lags)) / (lags + 1)
+  lrv <- (t(data) %*% data) / T_len
+  
+  if (lags > 0) {
+    for (i in 1:lags) {
+      Gammai <- (t(data[(i + 1):T_len, , drop = FALSE]) %*% data[1:(T_len - i), , drop = FALSE]) / T_len
+      lrv <- lrv + w[i + 1] * (Gammai + t(Gammai))
+    }
+  }
+  return(lrv)
+}
+
+# 2. Spot Variance Smoothing
+spv_lko_custom <- function(tgrid, x, t, h, k) {
+  m <- length(t); n <- length(tgrid)
+  kh <- function(val) { dnorm(val / h) / h }
+  tt <- outer(t, tgrid, "-")
+  ktth <- kh(tt)
+  
+  # Leave-one-out and neighbors mask
+  row_idx <- row(ktth); col_idx <- col(ktth)
+  mask <- abs(row_idx - col_idx) < k
+  ktth[mask] <- 0
+  
+  col_sums <- colSums(ktth)
+  col_sums[col_sums == 0] <- 1e-10 # Prevent division by zero
+  w <- ktth / matrix(col_sums, nrow = m, ncol = n, byrow = TRUE)
+  
+  return(colSums(w * matrix(x, nrow = m, ncol = n)))
+}
+
+# 3. Bandwidth Selection
+spv_cvbw_lko_custom <- function(x, t, k, h_range) {
+  cv <- numeric(length(h_range))
+  for (i in seq_along(h_range)) {
+    xhat <- spv_lko_custom(t, x, t, h_range[i], k)
+    cv[i] <- mean((x - xhat)^2, na.rm = TRUE)
+  }
+  return(h_range[which.min(cv)])
+}
+
+# 4. Main Harvey Test Function (Robust Version)
+harvey_dm_test <- function(d, h_range = NULL, k = 20) {
+  d <- as.numeric(as.vector(d)) # Force vector
+  n <- length(d)
+  t <- (1:n) / n
+  
+  # Default Bandwidth if NULL
+  if (is.null(h_range)) h_range <- seq(0.05, 0.3, length.out = 50)
+  
+  # Select Bandwidth
+  h_opt <- tryCatch({
+    spv_cvbw_lko_custom(x = d^2, t = t, k = k, h_range = h_range)
+  }, error = function(e) return(0.15)) # Fallback if CV fails
+  
+  # Smooth Variance
+  kh <- function(val) { dnorm(val / h_opt) / h_opt }
+  tt <- outer(t, t, "-")
+  ktth <- kh(tt)
+  w <- ktth / matrix(colSums(ktth), nrow = n, ncol = n, byrow = TRUE)
+  sv <- colSums(w * matrix(d^2, nrow = n, ncol = n))
+  
+  # Calculate Sigma (Safety clamp to avoid Inf)
+  sigma <- sqrt(sv)
+  sigma[sigma < 1e-8] <- 1e-8 
+  
+  # Statistics
+  lags <- min(floor(1.2 * n^(1/3)), n)
+  dv <- d / sigma
+  x_term <- 1 / sigma
+  
+  # DM1 (DM*)
+  num1 <- sqrt(n) * mean(dv)
+  den1 <- sqrt(lrvarnw_custom(as.matrix(dv), lags))
+  stat1 <- num1 / den1
+  
+  # DM2 (DM**)
+  num2 <- sqrt(n) * mean(dv * x_term)
+  den2 <- sqrt(lrvarnw_custom(as.matrix(dv * x_term), lags))
+  stat2 <- num2 / den2
+  
+  # Standard DM
+  dm_std_num <- sqrt(n) * mean(d)
+  dm_std_den <- sqrt(lrvarnw_custom(as.matrix(d), lags))
+  stat_std <- dm_std_num / dm_std_den
+  
+  return(list(
+    Pval_Standard = 2 * (1 - pnorm(abs(stat_std))),
+    Pval_Harvey_1 = 2 * (1 - pnorm(abs(stat1))),
+    Pval_Harvey_2 = 2 * (1 - pnorm(abs(stat2)))
+  ))
+}
+
+# ===== 3. Diebold-Mariano (DM) Tests (Standard & Harvey Heteroscedasticity-Robust) =====
+
+# Initialize matrices for results
+# DM_Standard: The classic test (similar to your original code)
+# DM_Harvey1:  The DM* test (Robust to heteroscedasticity)
+# DM_Harvey2:  The DM** test (Robust to heteroscedasticity, weighted)
+
+dm_p_std     <- matrix(NA, length(model_names), length(model_names), dimnames = list(model_names, model_names))
+dm_p_harvey1 <- matrix(NA, length(model_names), length(model_names), dimnames = list(model_names, model_names))
+dm_p_harvey2 <- matrix(NA, length(model_names), length(model_names), dimnames = list(model_names, model_names))
+
+cat("\nRunning Pairwise DM tests (Standard and Harvey 2024)...\n")
 
 for (i in seq_along(all_ferr)) {
   for (j in seq_along(all_ferr)) {
     if (i < j) {
+      
+      # 1. Get Forecast Errors
       e1 <- as.vector(all_ferr[[i]])
       e2 <- as.vector(all_ferr[[j]])
       
-      # CW test adjustment
-      fe1_sq <- e1^2
-      fe2_sq <- e2^2
-      adj_term <- fe1_sq - fe2_sq - (e1 - e2)^2
+      # 2. Calculate Loss Differential
+      # Since your original code used power=2 (MSE), we calculate the squared difference here.
+      # d_t = Loss(Model A) - Loss(Model B)
+      d_vec <- (e1^2) - (e2^2)
       
-      # CW statistic and p-value
-      cw_stat <- mean(adj_term, na.rm = TRUE) / sd(adj_term, na.rm = TRUE)
-      cw_p[i, j] <- 2 * (1 - pnorm(abs(cw_stat)))
+      # Handle NAs if any exist in the tail
+      d_vec <- na.omit(d_vec)
+      
+      # Check for zero variance (identical forecasts)
+      if (sd(d_vec) < 1e-10) {
+        warning(sprintf("Skipped (%s vs %s): Identical forecasts.", model_names[i], model_names[j]))
+        next
+      }
+      
+      # 3. Run the Harvey Test
+      # We wrap in tryCatch to handle potential singular matrix errors in rare cases
+      test_res <- tryCatch({
+        # h_range: Range of bandwidths to test (0.05 to 0.3 is standard for this sample size)
+        # k: Gap for cross-validation (20 is the paper's recommendation)
+        harvey_dm_test(d = d_vec, h_range = seq(0.04, 0.3, length.out = 50), k = 20)
+      }, error = function(e) {
+        warning(sprintf("Test failed for (%s vs %s): %s", model_names[i], model_names[j], e$message))
+        return(NULL)
+      })
+      
+      # 4. Store Results
+      if (!is.null(test_res)) {
+        dm_p_std[i, j]     <- test_res$Pval_Standard   # Standard DM
+        dm_p_harvey1[i, j] <- test_res$Pval_Harvey_1   # Harvey DM* (Primary)
+        dm_p_harvey2[i, j] <- test_res$Pval_Harvey_2   # Harvey DM** (Alternative)
+      }
     }
   }
 }
 
-cat("\nClark–West p-values (GMM vs Standard and among all models):\n")
-print(round(cw_p, 4))
+# ===== Output Results =====
+
+cat("\n--------------------------------------------------------------\n")
+cat("Standard DM Test P-values (assuming homoscedasticity):\n")
+print(round(dm_p_std, 4))
+
+cat("\n--------------------------------------------------------------\n")
+cat("Harvey (2024) DM* P-values (Heteroscedasticity-Robust):\n")
+cat("Note: This is the primary test statistic recommended by the paper.\n")
+print(round(dm_p_harvey1, 4))
+
+cat("\n--------------------------------------------------------------\n")
+cat("Harvey (2024) DM** P-values (Heteroscedasticity-Robust):\n")
+print(round(dm_p_harvey2, 4))
+
+
+#===== DM Harvey ==========
+# If Net_GO is your benchmark (appears to be column 6):
+benchmark_col <- which(model_names == "Net_GO")
+
+# Extract comparisons vs benchmark:
+std_vs_benchmark <- dm_p_std[, benchmark_col]
+harvey1_vs_benchmark <- dm_p_harvey1[, benchmark_col]  # DM'
+harvey2_vs_benchmark <- dm_p_harvey2[, benchmark_col]  # DM**
+
+# Print comparison:
+results_table <- data.frame(
+  Model = model_names,
+  Standard_DM = round(std_vs_benchmark, 4),
+  Harvey_DM_prime = round(harvey1_vs_benchmark, 4),
+  Harvey_DM_starstar = round(harvey2_vs_benchmark, 4)
+)
+print(results_table)
+
+
+
+
+# ==============================================================================
+# SPECIFIC BENCHMARK COMPARISON: Net_GO vs ALL
+# ==============================================================================
+
+# 1. Identify Benchmark Index
+benchmark_name <- "Net_GO"
+bench_idx <- which(model_names == benchmark_name)
+
+if (length(bench_idx) == 0) {
+  stop("Error: 'Net_GO' not found in model_names. Please check your spelling.")
+}
+
+# 2. Initialize Results Table
+results_df <- data.frame(
+  Model = character(),
+  Standard_DM = numeric(),
+  Harvey_DM_Star = numeric(),   # DM*
+  Harvey_DM_StarStar = numeric(), # DM**
+  stringsAsFactors = FALSE
+)
+
+# 3. Loop: Compare Every Model vs Net_GO
+cat(paste0("\nRunning DM tests with Benchmark: ", benchmark_name, "...\n"))
+
+# Get Benchmark Errors
+e_bench <- as.vector(all_ferr[[bench_idx]])
+
+for (i in seq_along(model_names)) {
+  
+  # Skip comparing the benchmark to itself
+  if (i == bench_idx) next 
+  
+  current_model <- model_names[i]
+  e_curr <- as.vector(all_ferr[[i]])
+  
+  # ---------------------------------------------------------
+  # Define Loss Differential (d_t)
+  # H0: Equal Predictive Ability
+  # d_t = Loss(Candidate) - Loss(Benchmark)
+  # If d_t < 0, Candidate is better (lower error)
+  # ---------------------------------------------------------
+  d_vec <- (e_curr^2) - (e_bench^2)
+  d_vec <- na.omit(d_vec)
+  
+  # Check for identical forecasts
+  if (sd(d_vec) < 1e-10) {
+    results_df <- rbind(results_df, data.frame(
+      Model = current_model,
+      Standard_DM = 1, # P-value 1 if identical
+      Harvey_DM_Star = 1,
+      Harvey_DM_StarStar = 1
+    ))
+    next
+  }
+  
+  # ---------------------------------------------------------
+  # Run Harvey Test
+  # ---------------------------------------------------------
+  test_res <- tryCatch({
+    harvey_dm_test(d = d_vec, h_range = seq(0.04, 0.3, length.out = 50), k = 20)
+  }, error = function(e) {
+    warning(paste("Test failed for:", current_model))
+    return(NULL)
+  })
+  
+  # Store Results
+  if (!is.null(test_res)) {
+    results_df <- rbind(results_df, data.frame(
+      Model = current_model,
+      Standard_DM = test_res$Pval_Standard,
+      Harvey_DM_Star = test_res$Pval_Harvey_1,
+      Harvey_DM_StarStar = test_res$Pval_Harvey_2
+    ))
+  }
+}
+
+# ==============================================================================
+# FINAL OUTPUT
+# ==============================================================================
+
+cat("\n============================================================\n")
+cat("FORECAST ACCURACY TESTS (Benchmark: ", benchmark_name, ")\n")
+cat("H0: Models have equal predictive accuracy.\n")
+cat("Small p-values (< 0.05) indicate significant difference.\n")
+cat("============================================================\n\n")
+
+# Formatting for readability
+results_formatted <- results_df
+results_formatted[, 2:4] <- round(results_formatted[, 2:4], 4)
+
+print(results_formatted)
+
+
+
 
 # ===== 5. Model Confidence Set (MCS) Test =====
 cat("\n--- Model Confidence Set (MCS) Results (alpha = 0.05) for All Models ---\n")
 
-all_ferr <- results[["300"]][["min"]]$fERR
+all_ferr <- results[["450"]][["min"]]$fERR
 
 min_rows <- min(sapply(all_ferr, nrow))
 
@@ -1259,37 +1826,3 @@ mcs_result_all <- MCS::MCSprocedure(
   statistic = "Tmax"
 )
 print(mcs_result_all)
-
-
-
-# ===== 6. Visualization of Model Rankings =====
-
-library(ggplot2)
-
-model_ranks <- data.frame(
-  Model = c("Net-CCC-GARCH", "Net-DCC-GARCH", "Net-GO-GARCH", 
-            "Standard-DCC", "Standard-CCC"),
-  Rank = c(3, 4, 2, 1, 5),
-  Loss = c(5.8709, 5.8710, 5.8638, 5.7403, 6.8804),
-  In_MCS = c(TRUE, TRUE, TRUE, TRUE, FALSE)
-)
-
-model_ranks <- model_ranks[order(model_ranks$Loss, decreasing = TRUE), ]
-model_ranks$Model <- factor(model_ranks$Model, levels = model_ranks$Model)
-
-ggplot(model_ranks, aes(x = Model, y = Loss, fill = In_MCS)) +
-  geom_bar(stat = "identity") +
-  scale_fill_manual(
-    values = c("TRUE" = "#4CAF50", "FALSE" = "#B0BEC5"),
-    name = expression("In MCS (" * alpha * " = 0.05)")
-  ) +
-  theme_minimal(base_size = 14) +
-  coord_flip() +
-  labs(
-    y = "Average Forecast Loss",
-    x = "Model"
-  )
-
-
-
-
