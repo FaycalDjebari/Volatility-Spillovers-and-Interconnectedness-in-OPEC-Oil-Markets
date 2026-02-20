@@ -14,9 +14,8 @@ library(TSclust)
 # Set working directory
 # =============================
 
-#setwd("/Users/faycal/Library/CloudStorage/Dropbox/R code for Network log-ARCH framework/")
-setwd("/Users/faycal/Library/CloudStorage/Dropbox/Code Paper 1/Volatility-Spillovers-and-Interconnectedness-in-OPEC-Oil-Markets-main")
-setwd("/Users/faycaldjebari/Library/CloudStorage/Dropbox/Code Paper 1/Volatility-Spillovers-and-Interconnectedness-in-OPEC-Oil-Markets-main")
+setwd("/Users/faycal/Library/CloudStorage/Dropbox/R code for Network log-ARCH framework/")
+
 
 log_returns <- read.csv("log_returns_data.csv")
 
@@ -1796,8 +1795,6 @@ results_formatted[, 2:4] <- round(results_formatted[, 2:4], 4)
 print(results_formatted)
 
 
-
-
 # ===== 5. Model Confidence Set (MCS) Test =====
 cat("\n--- Model Confidence Set (MCS) Results (alpha = 0.05) for All Models ---\n")
 
@@ -1826,3 +1823,6 @@ mcs_result_all <- MCS::MCSprocedure(
   statistic = "Tmax"
 )
 print(mcs_result_all)
+
+
+
