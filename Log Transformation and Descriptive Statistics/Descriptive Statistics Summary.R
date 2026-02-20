@@ -1,4 +1,4 @@
-# Copyright 2025 Fayçal Djebari
+# Copyright 2026 Fayçal Djebari
 # Licensed under the Apache License, Version 2.0
 # See the LICENSE file in the repository root for full license information.
 
@@ -7,12 +7,13 @@
 # ===============================
 
 # Load necessary libraries
-library(tidyverse)   # for data manipulation
-library(tseries)     # for Jarque-Bera test
-library(e1071)       # for skewness and kurtosis
+library(tidyverse)   
+library(tseries)     
+library(e1071)       
 
-# Set working directory (adjust if needed)
-setwd("/Users/faycal/Library/CloudStorage/Dropbox/R code for Network log-ARCH framework/")
+
+#setwd("/Users/faycal/Library/CloudStorage/Dropbox/R code for Network log-ARCH framework/")
+setwd("/Users/faycal/Library/CloudStorage/Dropbox/Code Paper 1/Volatility-Spillovers-and-Interconnectedness-in-OPEC-Oil-Markets-main")
 
 # Load your log returns data
 df <- read.csv("log_returns_data.csv")
@@ -48,19 +49,3 @@ summary_stats[, 2:8] <- round(summary_stats[, 2:8], 8)
 
 # Print the result as a plain table
 print(summary_stats, row.names = FALSE)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
