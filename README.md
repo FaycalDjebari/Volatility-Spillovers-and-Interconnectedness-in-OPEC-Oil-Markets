@@ -1,4 +1,4 @@
-# 📊 Reproducibility Guide – Network-Based Log-ARCH Framework
+# Reproducibility Guide – Network-Based Log-ARCH Framework
 
 **Preprint Title:**  
 _Volatility Spillovers and Interconnectedness in OPEC Oil Markets: A Network-Based Log-ARCH Approach_  
@@ -9,7 +9,7 @@ Djebari, F., Mehidi, K., Mazouz, K., Otto, P. (2025). Volatility Spillovers and 
 
 ---
 
-## 📄 Overview
+## Overview
 
 This repository contains the complete R code and data preprocessing pipeline developed for the study, which investigates volatility spillovers among six selected OPEC countries using both standard Multivariate GARCH models and a novel **Network-Based Log-ARCH framework** estimated via GMM.
 
@@ -17,7 +17,7 @@ All results are derived from monthly official OPEC oil prices, ensuring full **r
 
 ---
 
-## 📁 Folder and Script Structure
+## Folder and Script Structure
 
 ### 1. `Log Transformation and Descriptive Statistics/`
 
@@ -82,7 +82,7 @@ This is the **main script** implementing the proposed methodology.
 
 ---
 
-## 📬 Contact
+## Contact
 
 For questions, feedback, or collaboration inquiries, please contact:
 
