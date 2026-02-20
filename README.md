@@ -22,7 +22,7 @@ All results are derived from monthly official OPEC oil prices, ensuring full **r
 ### 1. `Log Transformation and Descriptive Statistics/`
 
 - **Objective:** Transform monthly OPEC crude oil prices into log returns.
-- **Source Data:** Extracted from `T71.xlsx` in `/Official Oil Price Data from OPEC database/`.
+- **Source Data:** Extracted from `t71.xlsx` in `/Official Oil Price Data from OPEC database/`.
 - **Processed Data:** `Monthly_OPEC_OIL_PRICE_DATA.xlsx`
 
 **Scripts:**
