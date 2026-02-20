@@ -77,7 +77,6 @@ This is the **main script** implementing the proposed methodology.
 - Computes:
   - Bootstrap confidence intervals
   - Diebold-Mariano statistics
-  - Clark-West statistics
   - Model Confidence Set (MCS)
 
 ---
