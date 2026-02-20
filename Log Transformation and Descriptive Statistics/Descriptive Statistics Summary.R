@@ -12,8 +12,8 @@ library(tseries)
 library(e1071)       
 
 
-#setwd("/Users/faycal/Library/CloudStorage/Dropbox/R code for Network log-ARCH framework/")
-setwd("/Users/faycal/Library/CloudStorage/Dropbox/Code Paper 1/Volatility-Spillovers-and-Interconnectedness-in-OPEC-Oil-Markets-main")
+setwd("/Users/faycal/Library/CloudStorage/Dropbox/R code for Network log-ARCH framework/")
+
 
 # Load your log returns data
 df <- read.csv("log_returns_data.csv")
