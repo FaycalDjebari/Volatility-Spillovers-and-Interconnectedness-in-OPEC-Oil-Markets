@@ -1,11 +1,11 @@
 # Reproducibility Guide – Network-Based Log-ARCH Framework
 
 **Preprint Title:**  
-_Volatility Spillovers and Interconnectedness in OPEC Oil Markets: A Network-Based Log-ARCH Approach_  
+_Forecasting Oil Volatility through Network Models with GARCH-Informed Correlation Weights_  
 **Authors:** Faycal Djebari, Kahina Mehidi, Khelifa Mazouz, Philipp Otto (2025)
 
 **Cite as:** 
-Djebari, F., Mehidi, K., Mazouz, K., Otto, P. (2025). Volatility Spillovers and Interconnectedness in OPEC Oil Markets: A Network-Based Log-ARCH Approach. arXiv preprint arXiv:2507.15046. URL: https://arxiv.org/abs/2507.15046
+Djebari, F., Mehidi, K., Mazouz, K., Otto, P. (2025). Forecasting Oil Volatility through Network Models with GARCH-Informed Correlation Weights. arXiv preprint arXiv:2507.15046. URL: https://arxiv.org/abs/2507.15046
 
 ---
 
