@@ -1,8 +1,8 @@
 # Reproducibility Guide – Network-Based Log-ARCH Framework
 
-**Preprint Title:**  
+**Title:**  
 _Forecasting Oil Volatility through Network Models with GARCH-Informed Correlation Weights_  
-**Authors:** Faycal Djebari, Kahina Mehidi, Khelifa Mazouz, Philipp Otto (2025)
+**Authors:** Faycal Djebari, Kahina Mehidi, Khelifa Mazouz, Philipp Otto
 
 **Cite as:** 
 Djebari, F., Mehidi, K., Mazouz, K., Otto, P. (2025). Forecasting Oil Volatility through Network Models with GARCH-Informed Correlation Weights. arXiv preprint arXiv:2507.15046. URL: https://arxiv.org/abs/2507.15046
@@ -11,73 +11,72 @@ Djebari, F., Mehidi, K., Mazouz, K., Otto, P. (2025). Forecasting Oil Volatility
 
 ## Overview
 
-This repository contains the complete R code and data preprocessing pipeline developed for the study, which investigates volatility spillovers among six selected OPEC countries using both standard Multivariate GARCH models and a novel **Network-Based Log-ARCH framework** estimated via GMM.
+This repository contains the data and R code of the study, which forecasts the volatility of monthly OPEC oil prices with network log-ARCH models (Mattera and Otto, 2024) estimated by GMM, and compares them with CCC-, DCC- and GO-GARCH benchmarks.
 
-All results are derived from monthly official OPEC oil prices, ensuring full **reproducibility and transparency**.
+The code in this version corresponds to the revised manuscript. The main changes relative to the first version are:
 
----
-
-## Folder and Script Structure
-
-### 1. `Log Transformation and Descriptive Statistics/`
-
-- **Objective:** Transform monthly OPEC crude oil prices into log returns.
-- **Source Data:** Extracted from `t71.xlsx` in `/Official Oil Price Data from OPEC database/`.
-- **Processed Data:** `Monthly_OPEC_OIL_PRICE_DATA.xlsx`
-
-**Scripts:**
-
-- `Calculate Log Returns.R` – Computes log returns from raw prices.
-- `Plotting Log Returns and Squared Log Returns.R` – Plots time series of log and squared returns.
-- `Histograms of Monthly Log Returns.R` – Generates histograms for each country.
-- `Descriptive Statistics Summary.R` – Computes summary statistics (mean, sd, skewness, kurtosis, JB test).
-
-**Outputs:**
-
-- `log_returns_data.csv` – Primary dataset for all modeling stages.
-- Figures and tables for descriptive analysis.
+- All volatility models are estimated on pre-whitened returns (AR(1) filter and ZCA whitening, estimated within each training window). The weight matrices are still built from the log-returns.
+- The forecast intercept of the network models follows Mattera and Otto (2024, Eq. 9), and the variance-scale forecasts use the smearing estimator.
+- A seventh weight matrix, based on generalized forecast error variance decompositions (connectedness), is added.
+- The MGARCH benchmarks are compared with the network models on the log-squared scale after centring, and on the variance scale with QLIKE and MSE.
+- The forecast evaluation reports the standard, heteroskedasticity-robust (Harvey et al., 2024) and panel-robust Diebold-Mariano tests, and the Model Confidence Set.
+- New analyses: forecast combinations, weight stability and structural breaks, economic value, simulations of estimation cost and forecast accuracy, and an extended panel with Iraq and Kuwait.
 
 ---
 
-### 2. `Standard MGARCH models/`
+## Files
 
-**Scripts:**
+### Data
 
-- `CCC GARCH.R` – Forecasting error generation for CCC-GARCH
-- `DCC GARCH.R` – Forecasting error generation for DCC-GARCH
-- `GO GARCH.R` – Forecasting error generation for GO-GARCH
+- `log_returns_data.csv`: monthly log-returns of the six producers, 1983 to 2024. Computed from the official OPEC prices (`t71.xlsx` in `/Official Oil Price Data from OPEC database/`).
+- `log_returns_data_8.csv`: the same panel with Iraq and Kuwait, from 1998 (Appendix G).
+- `W_go_cached_logret_v2.rds` and `W_go_cached_logret_v2_T0_<T0>.rds`: stored GO-GARCH fits used for the GO-GARCH weight matrices. The ICA step of `gogarchfit()` is not fully controlled by `set.seed()`, so these files are needed to reproduce the GO-GARCH weights exactly.
 
-**Subfolders (auto-created):**
+### Scripts (run in this order)
 
-- `fERR_ccc_T0/` – Forecast error matrices from CCC-GARCH
-- `fERR_dcc_T0/` – Forecast error matrices from DCC-GARCH
-- `fERR_go_T0/` – Forecast error matrices from GO-GARCH
+**1. `MGARCH_benchmarks.R`**
 
-**Notes:**
+Rolling one-step forecasts of the CCC-, DCC- and GO-GARCH benchmarks on the pre-whitened returns, for training windows T0 = 200, ..., 450. Writes to `Standard MGARCH models (whitened)/`:
 
-- Forecast errors (`fERR_*.csv`) are saved and reused to save computational time.
-- Rolling windows and multiple epsilon values are used for robustness.
-- These scripts are computationally intensive and are separated for efficiency.
+- `fERR_<m>_T0/`: forecast errors of ln(sigma^2)
+- `fERR_<m>_T0_centred/`: forecast errors of the centred forecasts (Section 6.3.1)
+- `Computation_Metrics_<m>/`: computing time per origin (Table D.1)
 
----
+This script is computationally intensive. Its output is read by the two other scripts.
 
-### 3. `Network_based_log_ARCH_Framework.R`
+**2. `Network_based_log_ARCH_Framework.R`**
 
-This is the **main script** implementing the proposed methodology.
+Main script. Writes its tables to `Results/` and the extended panel to `Robustness N8/`.
 
-**Key Components:**
+| Section | Content | Paper |
+|---|---|---|
+| 1 | Packages and input files | |
+| 2 | GMM estimator, forecast intercept | Eq. 17 |
+| 3 | Distance measures and pre-whitening | Section 5.3 |
+| 4 | Data and descriptive statistics | Tables 1-2 |
+| 5 | Full-sample GARCH models and weight matrices | Tables 3, 4, C.1 |
+| 6 | Weight matrices for each training window | |
+| 7 | Network figures | Figures 2, 3, F.1, F.2 |
+| 8 | GMM estimates at T0 = 450 | Table 5 |
+| 9 | Rolling one-step forecasts | Tables 6, E.1 |
+| 10 | Bootstrap intervals, DM tests, MCS | Tables 6, E.1, E.2 |
+| 11 | Weight stability, subperiods, structural breaks | Table 8 |
+| 12 | Economic value (volatility timing, VaR) | Table 9 |
+| 13 | Simulation: estimation cost | Tables D.1, D.2 |
+| 14 | Simulation: forecast accuracy | Table D.3 |
+| 15 | Extended panel with Iraq and Kuwait | Table G.1 |
 
-- Loads `log_returns_data.csv`
-- Constructs six types of weight matrices:
-  - Euclidean, Correlation, Piccolo (AR-based)
-  - Time-averaged correlations from CCC-, DCC-, and GO-GARCH
-- Visualizes networks based on each matrix
-- Estimates the GMM-based Network Log-ARCH models
-- Performs out-of-sample forecasting with a rolling window
-- Computes:
-  - Bootstrap confidence intervals
-  - Diebold-Mariano statistics
-  - Model Confidence Set (MCS)
+The seven weight matrices are Euclidean, correlation and Piccolo (on log-squared returns), time-averaged conditional correlations from CCC-, DCC- and GO-GARCH, and connectedness. All are normalized by their spectral radius.
+
+**3. `Forecast_combination.R`**
+
+Forecast combinations (equal weights, minimum variance, constrained OLS) on the log-squared scale (Table 7). Reads `Results/network_fERR_T0_450.rds`, saved by the main script, and the centred MGARCH errors.
+
+### Notes
+
+- Forecast errors (`fERR_*.csv`) and the GO-GARCH fits (`.rds`) are stored and reused when they exist. Delete them to re-estimate the models.
+- Random steps (GO-GARCH ICA, bootstrap, MCS, simulations) use `set.seed(123)`.
+- Set the working directory at the top of each script (`setwd()`).
 
 ---
 
@@ -112,11 +111,11 @@ This project is licensed under the Apache License, Version 2.0. See the [LICENSE
 - **R version**: 4.2 or later
 - **R packages:**
 
-````r
-install.packages(c("rugarch", "rmgarch", "tseries", "e1071", "igraph", "MCS",
-                  "future", "parallel", "readxl", "dplyr", "ggplot2", "MASS",
-                  "Rsolnp", "forecast", "MTS", "TSclust", "xts", "reshape2",
-                  "wesanderson", "classInt", "lmtest", "future.apply"))
+```r
+install.packages(c("rugarch", "rmgarch", "xts", "vars", "MCS", "strucchange",
+                   "igraph", "wesanderson", "classInt", "R.utils", "MASS",
+                   "pbapply"))
+```
 
 > ⚠️ **Important:** Use `rugarch` version **1.5-3**.
 > The newer version (1.5-4) introduces internal changes that may cause errors when extracting covariance matrices (`rcov`) from **GO-GARCH** models.
@@ -127,5 +126,9 @@ install.packages(c("rugarch", "rmgarch", "tseries", "e1071", "igraph", "MCS",
 > devtools::install_version("rugarch", version = "1.5-3")
 > ```
 
+### 2. Running
 
-````
+1. Run `MGARCH_benchmarks.R`.
+2. Run `Network_based_log_ARCH_Framework.R`.
+3. Run `Forecast_combination.R` in a fresh R session.
+
