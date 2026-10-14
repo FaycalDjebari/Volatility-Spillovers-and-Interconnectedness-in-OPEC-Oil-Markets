@@ -30,7 +30,6 @@ The code in this version corresponds to the revised manuscript. The main changes
 
 - `log_returns_data.csv`: monthly log-returns of the six producers, 1983 to 2024. Computed from the official OPEC prices (`t71.xlsx` in `/Official Oil Price Data from OPEC database/`).
 - `log_returns_data_8.csv`: the same panel with Iraq and Kuwait, from 1998 (Appendix G).
-- `W_go_cached_logret_v2.rds` and `W_go_cached_logret_v2_T0_<T0>.rds`: stored GO-GARCH fits used for the GO-GARCH weight matrices. The ICA step of `gogarchfit()` is not fully controlled by `set.seed()`, so these files are needed to reproduce the GO-GARCH weights exactly.
 
 ### Scripts (run in this order)
 
@@ -74,7 +73,8 @@ Forecast combinations (equal weights, minimum variance, constrained OLS) on the 
 
 ### Notes
 
-- Forecast errors (`fERR_*.csv`) and the GO-GARCH fits (`.rds`) are stored and reused when they exist. Delete them to re-estimate the models.
+- The scripts save the forecast errors (`fERR_*.csv`) and the GO-GARCH fits (`W_go_cached_*.rds`) on the first run and reuse them afterwards. Delete them to re-estimate the models.
+- The ICA step of `gogarchfit()` is not fully controlled by `set.seed()`, so GO-GARCH results from a new run can differ slightly from those in the paper.
 - Random steps (GO-GARCH ICA, bootstrap, MCS, simulations) use `set.seed(123)`.
 - Set the working directory at the top of each script (`setwd()`).
 
@@ -131,4 +131,3 @@ install.packages(c("rugarch", "rmgarch", "xts", "vars", "MCS", "strucchange",
 1. Run `MGARCH_benchmarks.R`.
 2. Run `Network_based_log_ARCH_Framework.R`.
 3. Run `Forecast_combination.R` in a fresh R session.
-
