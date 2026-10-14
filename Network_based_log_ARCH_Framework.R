@@ -30,9 +30,9 @@
 #  * log_returns_data_8.csv  the same with Iraq and Kuwait, from 1998
 #  * "Standard MGARCH models (whitened)/": forecast errors and timings of the
 #    CCC-, DCC- and GO-GARCH benchmarks, written by MGARCH_benchmarks.R
-#  * W_go_cached_logret_v2*.rds: stored GO-GARCH fits. The ICA step of
-#    gogarchfit() is not fully controlled by set.seed(), so the stored fits
-#    are needed to reproduce the GO-GARCH weights exactly.
+#  * W_go_cached_logret_v2*.rds: GO-GARCH fits, saved on the first run and
+#    reused afterwards. The ICA step of gogarchfit() is not fully controlled
+#    by set.seed(), so a new run can give slightly different GO-GARCH weights.
 #
 # Conventions
 #  * The volatility proxy is ln(max(y^2, eps)). The same eps is used for
